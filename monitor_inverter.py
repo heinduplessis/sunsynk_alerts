@@ -10,6 +10,8 @@ from sunsynk.client import SunsynkClient
 #https://api.bulksms.com/v1/messages/send?to=%2b27824616593&body=Hello%20World
 #aerobots / wwwBulksms1
 
+APP_VERSION='Sunsynk Monitor V1.00'
+
 BATT_SOC_LOW_THRESHOLD=50
 BATT_SOC_LOW_CRIT_THRESHOLD=20
 BATT_SOC_LOW_RESET=60
@@ -23,7 +25,7 @@ BATT_SOC_ALARM_CRITICAL_FN="battery_soc_alarm_critical.sig"
 BATT_PWR_ALARM_FN="battery_pwr_alarm.sig"
 BATT_PWR_ALARM_CRITICAL_FN="battery_pwr_alarm_critical.sig"
 
-infinite_loop = False
+infinite_loop = True
 
 def send_sms(sms_message):
     # HTTP Basic Authentication credentials
@@ -72,6 +74,8 @@ async def main():
     sunsynk_username = "hein@aerobots.co.za"
     sunsynk_password = "wwwSunsynk"
     check_count=0
+
+    print(APP_VERSION)
 
     async with SunsynkClient(sunsynk_username, sunsynk_password) as client:
         inverters = await client.get_inverters()
