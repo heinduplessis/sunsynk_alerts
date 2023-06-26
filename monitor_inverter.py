@@ -104,7 +104,7 @@ async def main():
                     check_alarm(pwr > BATT_PWR_HIGH_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_FN,f"INVERTER ALERT! Battery Power High: {battery.power} W. SOC: {soc}%")
                     check_alarm(pwr > BATT_PWR_HIGH_CRIT_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery Power CRITICALLY High: {battery.power} W. SOC: {soc}%")
                 except:
-                    logging.exception
+                    logging.exception('')
                     print("Critical error, check log")
 
                 time.sleep(5*60)
