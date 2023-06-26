@@ -4,13 +4,15 @@ import requests
 import json
 import os.path
 import time
+import datetime
+import logging
 
 from sunsynk.client import SunsynkClient
 
 #https://api.bulksms.com/v1/messages/send?to=%2b27824616593&body=Hello%20World
 #aerobots / wwwBulksms1
 
-APP_VERSION='Sunsynk Monitor V1.00'
+APP_VERSION='Sunsynk Monitor V1.01'
 
 BATT_SOC_LOW_THRESHOLD=50
 BATT_SOC_LOW_CRIT_THRESHOLD=20
@@ -76,36 +78,43 @@ async def main():
     check_count=0
 
     print(APP_VERSION)
+    logging.info(APP_VERSION)
 
     async with SunsynkClient(sunsynk_username, sunsynk_password) as client:
         inverters = await client.get_inverters()
         for inverter in inverters:
             while infinite_loop:
-                check_count=check_count+1
-                print(f"{check_count} checking... ",end="\r")
-                grid = await client.get_inverter_realtime_grid(inverter.sn)
-                battery = await client.get_inverter_realtime_battery(inverter.sn)
-                solar_pv = await client.get_inverter_realtime_input(inverter.sn)
-                output_values = await client.get_inverter_realtime_output(inverter.sn)
+                logging.info(f"{check_count} checking... ")
+                try:
+                    grid = await client.get_inverter_realtime_grid(inverter.sn)
+                    battery = await client.get_inverter_realtime_battery(inverter.sn)
+                    solar_pv = await client.get_inverter_realtime_input(inverter.sn)
+                    output_values = await client.get_inverter_realtime_output(inverter.sn)
 
-                inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {battery.power} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {battery.soc}%"
-                # print(f"battery={battery}\n")
-                # print(f"solar_pv={solar_pv}\n")
-                # print(f"output_values={output_values}\n")
+                    inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {battery.power} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {battery.soc}%"
+                    # print(f"battery={battery}\n")
+                    # print(f"solar_pv={solar_pv}\n")
+                    # print(f"output_values={output_values}\n")
 
-                soc=float(battery.soc)
-                pwr=battery.power
-                #Check for low battery
-                print(f"{check_count} check done",end="\r")
+                    soc=float(battery.soc)
+                    pwr=battery.power
 
-                check_alarm(soc < BATT_SOC_LOW_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_FN,f"INVERTER ALERT! Battery SOC Low: {soc}%. Battery Power: {battery.power} W")
-                check_alarm(soc < BATT_SOC_LOW_CRIT_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery SOC CRITICALLY Low: {soc}%. Battery Power: {battery.power} W")
-                check_alarm(pwr > BATT_PWR_HIGH_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_FN,f"INVERTER ALERT! Battery Power High: {battery.power} W. SOC: {soc}%")
-                check_alarm(pwr > BATT_PWR_HIGH_CRIT_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery Power CRITICALLY High: {battery.power} W. SOC: {soc}%")
-
-                print(f"{check_count} check done",end="\r")
+                    check_alarm(soc < BATT_SOC_LOW_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_FN,f"INVERTER ALERT! Battery SOC Low: {soc}%. Battery Power: {battery.power} W")
+                    check_alarm(soc < BATT_SOC_LOW_CRIT_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery SOC CRITICALLY Low: {soc}%. Battery Power: {battery.power} W")
+                    check_alarm(pwr > BATT_PWR_HIGH_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_FN,f"INVERTER ALERT! Battery Power High: {battery.power} W. SOC: {soc}%")
+                    check_alarm(pwr > BATT_PWR_HIGH_CRIT_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery Power CRITICALLY High: {battery.power} W. SOC: {soc}%")
+                except:
+                    logging.exception
+                    print("Critical error, check log")
 
                 time.sleep(5*60)
     # send_sms()
+
+# Configure the logger
+logging.basicConfig(
+    level=logging.DEBUG, 
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='monitor_inverter.log'
+)
 
 asyncio.run(main())
