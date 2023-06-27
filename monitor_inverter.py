@@ -4,7 +4,6 @@ import requests
 import json
 import os.path
 import time
-import datetime
 import logging
 
 from sunsynk.client import SunsynkClient
@@ -12,7 +11,7 @@ from sunsynk.client import SunsynkClient
 #https://api.bulksms.com/v1/messages/send?to=%2b27824616593&body=Hello%20World
 #aerobots / wwwBulksms1
 
-APP_VERSION='Sunsynk Monitor V1.01'
+APP_VERSION='Sunsynk Monitor V1.02'
 
 BATT_SOC_LOW_THRESHOLD=50
 BATT_SOC_LOW_CRIT_THRESHOLD=20
@@ -84,7 +83,7 @@ async def main():
         inverters = await client.get_inverters()
         for inverter in inverters:
             while infinite_loop:
-                logging.info(f"{check_count} checking... ")
+                # logging.info(f"{check_count} checking... ")
                 try:
                     grid = await client.get_inverter_realtime_grid(inverter.sn)
                     battery = await client.get_inverter_realtime_battery(inverter.sn)
