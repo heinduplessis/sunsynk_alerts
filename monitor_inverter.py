@@ -9,10 +9,12 @@ import json
 import os.path
 import time
 import logging
+import urllib.request
 
 from sunsynk.client import SunsynkClient
 
-APP_VERSION='Sunsynk Monitor V0.03'
+APP_VERSION='Sunsynk Monitor V0.04'
+DEVICE_ID=2 #2 is sunsyk inverter for espresso data
 
 BATT_SOC_LOW_THRESHOLD=50
 BATT_SOC_LOW_CRIT_THRESHOLD=20
@@ -33,8 +35,8 @@ SUNSYNK_PASS=os.getenv('SUNSYNK_PASS')
 BULKSMS_USER=os.getenv('BULKSMS_USER')
 BULKSMS_PASS=os.getenv('BULKSMS_PASS')
 
-#Make this false if you're using a cron to run on schedule
-infinite_loop = True
+#Make this True if you need it to run forever
+RUN_FOREVER = True
 
 def send_sms(sms_message):
     # HTTP Basic Authentication credentials
@@ -81,7 +83,7 @@ def check_alarm(condition_alarm, condition_reset, sig_file, msg):
 
 async def main():
     # sunsynk_username = "hein@aerobots.co.za"
-    check_count=0
+    abort_run=False
 
     print(APP_VERSION)
     logging.info(APP_VERSION)
@@ -89,8 +91,9 @@ async def main():
     async with SunsynkClient(SUNSYNK_USER, SUNSYNK_PASS) as client:
         inverters = await client.get_inverters()
         for inverter in inverters:
-            while infinite_loop:
-                # logging.info(f"{check_count} checking... ")
+            while not abort_run:
+                # logging.info(f"checking... ")
+                abort_run = not RUN_FOREVER
                 try:
                     grid = await client.get_inverter_realtime_grid(inverter.sn)
                     battery = await client.get_inverter_realtime_battery(inverter.sn)
@@ -98,9 +101,17 @@ async def main():
                     output_values = await client.get_inverter_realtime_output(inverter.sn)
 
                     inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {battery.power} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {battery.soc}%"
-                    # print(f"battery={battery}\n")
-                    # print(f"solar_pv={solar_pv}\n")
-                    # print(f"output_values={output_values}\n")
+                    print(f"battery={battery}\n")
+                    print(f"solar_pv={solar_pv}\n")
+                    print(f"output_values={output_values}\n")
+                    url = f"http://wingops.aerobots.co.za:1880/store_Data?device_id={DEVICE_ID}&inverter_sn={inverter.sn}"\
+                        f"&grid_power={grid.get_power()}"\
+                        f"&battery_power={battery.power}"\
+                        f"&solar_pv={solar_pv.get_power()}"\
+                        f"&battery_soc={battery.soc}"
+                    print (f"url={url}")
+                    contents = urllib.request.urlopen(url).read()
+                    print("Response=",contents)
 
                     soc=float(battery.soc)
                     pwr=battery.power
@@ -112,8 +123,8 @@ async def main():
                 except:
                     logging.exception('')
                     print("Critical error, check log")
-
-                time.sleep(5*60)
+                if RUN_FOREVER:
+                    time.sleep(5*60)
     # send_sms()
 
 # Configure the logger
