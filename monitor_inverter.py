@@ -99,22 +99,25 @@ async def main():
                     battery = await client.get_inverter_realtime_battery(inverter.sn)
                     solar_pv = await client.get_inverter_realtime_input(inverter.sn)
                     output_values = await client.get_inverter_realtime_output(inverter.sn)
+                    soc=float(battery.soc)
+                    pwr=battery.power
 
-                    inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {battery.power} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {battery.soc}%"
+                    inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {pwr} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {soc}%"
                     print(f"battery={battery}\n")
                     print(f"solar_pv={solar_pv}\n")
                     print(f"output_values={output_values}\n")
                     url = f"http://wingops.aerobots.co.za:1880/store_Data?device_id={DEVICE_ID}&inverter_sn={inverter.sn}"\
                         f"&grid_power={grid.get_power()}"\
                         f"&battery_power={battery.power}"\
-                        f"&solar_pv={solar_pv.get_power()}"\
-                        f"&battery_soc={battery.soc}"
+                        f"&solar_pv={pwr}"\
+                        f"&battery_soc={soc}"
                     print (f"url={url}")
-                    contents = urllib.request.urlopen(url).read()
-                    print("Response=",contents)
-
-                    soc=float(battery.soc)
-                    pwr=battery.power
+                    try:
+                        contents = urllib.request.urlopen(url).read()
+                        print("Response=",contents)
+                    except:
+                        logging.exception('')
+                        print("Critical error with espresso, check log")
 
                     check_alarm(soc < BATT_SOC_LOW_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_FN,f"INVERTER ALERT! Battery SOC Low: {soc}%. Battery Power: {battery.power} W")
                     check_alarm(soc < BATT_SOC_LOW_CRIT_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery SOC CRITICALLY Low: {soc}%. Battery Power: {battery.power} W")
