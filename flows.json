@@ -1,0 +1,164 @@
+[
+    {
+        "id": "2ca13f1e8539e9a8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "f66a7d35f96710f6",
+        "type": "MySQLdatabase",
+        "name": "",
+        "host": "127.0.0.1",
+        "port": "3303",
+        "db": "espresso",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "553eb04b36b3f7c5",
+        "type": "http in",
+        "z": "2ca13f1e8539e9a8",
+        "name": "store_data",
+        "url": "/store_data",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 320,
+        "wires": [
+            [
+                "4f6ccaf112cef5fe",
+                "0e894f95b531b529"
+            ]
+        ]
+    },
+    {
+        "id": "af945ed4c6d861e2",
+        "type": "http response",
+        "z": "2ca13f1e8539e9a8",
+        "name": "return OK",
+        "statusCode": "200",
+        "headers": {
+            "a": "1"
+        },
+        "x": 760,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "4f6ccaf112cef5fe",
+        "type": "function",
+        "z": "2ca13f1e8539e9a8",
+        "name": "Set Response",
+        "func": "msg.payload = 'Thankssss for the data'\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 400,
+        "wires": [
+            [
+                "af945ed4c6d861e2"
+            ]
+        ]
+    },
+    {
+        "id": "7acdb7d868db505d",
+        "type": "mysql",
+        "z": "2ca13f1e8539e9a8",
+        "mydb": "f66a7d35f96710f6",
+        "name": "",
+        "x": 760,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0e894f95b531b529",
+        "type": "function",
+        "z": "2ca13f1e8539e9a8",
+        "name": "Set SQL",
+        "func": "var data_value = JSON.stringify(msg.payload)\nmsg.topic = \"INSERT INTO espresso.sensor_data (entry_date_time, data_string) VALUES(CURRENT_TIMESTAMP, '\"+data_value+\"')\"\nreturn msg",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 240,
+        "wires": [
+            [
+                "7acdb7d868db505d"
+            ]
+        ]
+    },
+    {
+        "id": "871a70a43509c76c",
+        "type": "http in",
+        "z": "2ca13f1e8539e9a8",
+        "name": "get_inverter_status",
+        "url": "/get_inverter_status",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 210,
+        "y": 560,
+        "wires": [
+            [
+                "29fa2d8672f0a0c3"
+            ]
+        ]
+    },
+    {
+        "id": "29fa2d8672f0a0c3",
+        "type": "function",
+        "z": "2ca13f1e8539e9a8",
+        "name": "set SQL",
+        "func": "msg.topic = 'SELECT entry_date_time, JSON_EXTRACT(data_string , \"$.stamina\") AS stamina FROM sensor_data sd WHERE JSON_EXTRACT(data_string, \"$.device_id\") = \"2\" ORDER BY entry_date_time DESC LIMIT 1'\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 560,
+        "wires": [
+            [
+                "78dddecb05f7ff3c"
+            ]
+        ]
+    },
+    {
+        "id": "e0bf19451bc72f78",
+        "type": "http response",
+        "z": "2ca13f1e8539e9a8",
+        "name": "return OK",
+        "statusCode": "200",
+        "headers": {
+            "a": "1"
+        },
+        "x": 980,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "78dddecb05f7ff3c",
+        "type": "mysql",
+        "z": "2ca13f1e8539e9a8",
+        "mydb": "f66a7d35f96710f6",
+        "name": "Query Inverter Satus",
+        "x": 720,
+        "y": 560,
+        "wires": [
+            [
+                "e0bf19451bc72f78"
+            ]
+        ]
+    }
+]
