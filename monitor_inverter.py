@@ -2,6 +2,7 @@
 # Based on https://github.com/jamesridgway/sunsynk-api-client
 # June 2023, Hein du Plessis
 
+
 import asyncio
 import os
 import requests
@@ -13,7 +14,8 @@ import urllib.request
 
 from sunsynk.client import SunsynkClient
 
-APP_VERSION='Sunsynk Monitor V0.04'
+APP_VERSION='Sunsynk Monitor V0.05'
+#0.05 Added "stamina" column for enumerating the energy capacity
 DEVICE_ID=2 #2 is sunsyk inverter for espresso data
 
 BATT_SOC_LOW_THRESHOLD=50
@@ -81,6 +83,22 @@ def check_alarm(condition_alarm, condition_reset, sig_file, msg):
         os.remove(sig_file)
         print(f"Alarm reset ({sig_file})")
 
+def get_stamina(grid_power, pv_power, battery_power, soc):
+#A calcualtion based on the sustainablility of power in current conditions.
+#1. Start with 100% stamina
+#2. if grid usage is more then 1kw, deduct 30 points
+#3. if pv input is more than 6kw, add 50 points
+#4. if soc is < 50% deduct 20 points
+#5. if battery_power > 0 deduct 30 points
+    stamina = 100
+    if grid_power >= 50:
+        stamina = min(stamina,50)
+    if (soc < 50) and (battery_power >= 0):
+        stamina = min(stamina,soc)
+
+    return stamina
+
+
 async def main():
     # sunsynk_username = "hein@aerobots.co.za"
     abort_run=False
@@ -100,17 +118,22 @@ async def main():
                     solar_pv = await client.get_inverter_realtime_input(inverter.sn)
                     output_values = await client.get_inverter_realtime_output(inverter.sn)
                     soc=float(battery.soc)
-                    pwr=battery.power
+                    batt_power=battery.power
+                    grid_power=grid.get_power()
+                    pv_power=solar_pv.get_power()
+                    stamina=get_stamina(grid_power,pv_power,batt_power,soc)
 
-                    inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid.get_power()} W from the grid, {pwr} W from battery and {solar_pv.get_power()} W solar and {output_values.vip} W demand. Battery is at {soc}%"
+                    inverter_status_str=f"Inverter (sn: {inverter.sn}) is drawing {grid_power} W from the grid, {batt_power} W from battery and {pv_power} W solar and {output_values.vip} W demand. Battery is at {soc}%"
+                    print(inverter_status_str)
                     print(f"battery={battery}\n")
                     print(f"solar_pv={solar_pv}\n")
                     print(f"output_values={output_values}\n")
                     url = f"http://wingops.aerobots.co.za:1880/store_Data?device_id={DEVICE_ID}&inverter_sn={inverter.sn}"\
-                        f"&grid_power={grid.get_power()}"\
-                        f"&battery_power={battery.power}"\
-                        f"&solar_pv={pwr}"\
-                        f"&battery_soc={soc}"
+                        f"&grid_power={grid_power}"\
+                        f"&battery_power={batt_power}"\
+                        f"&solar_pv={pv_power}"\
+                        f"&battery_soc={soc}"\
+                        f"&stamina={stamina}"
                     print (f"url={url}")
                     try:
                         contents = urllib.request.urlopen(url).read()
@@ -121,8 +144,8 @@ async def main():
 
                     check_alarm(soc < BATT_SOC_LOW_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_FN,f"INVERTER ALERT! Battery SOC Low: {soc}%. Battery Power: {battery.power} W")
                     check_alarm(soc < BATT_SOC_LOW_CRIT_THRESHOLD,soc >= BATT_SOC_LOW_RESET,BATT_SOC_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery SOC CRITICALLY Low: {soc}%. Battery Power: {battery.power} W")
-                    check_alarm(pwr > BATT_PWR_HIGH_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_FN,f"INVERTER ALERT! Battery Power High: {battery.power} W. SOC: {soc}%")
-                    check_alarm(pwr > BATT_PWR_HIGH_CRIT_THRESHOLD,pwr <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery Power CRITICALLY High: {battery.power} W. SOC: {soc}%")
+                    check_alarm(batt_power > BATT_PWR_HIGH_THRESHOLD,batt_power <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_FN,f"INVERTER ALERT! Battery Power High: {battery.power} W. SOC: {soc}%")
+                    check_alarm(batt_power > BATT_PWR_HIGH_CRIT_THRESHOLD,batt_power <= BATT_PWR_HIGH_RESET,BATT_PWR_ALARM_CRITICAL_FN,f"**INVERTER ALERT! Battery Power CRITICALLY High: {battery.power} W. SOC: {soc}%")
                 except:
                     logging.exception('')
                     print("Critical error, check log")
