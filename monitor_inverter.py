@@ -85,16 +85,14 @@ def check_alarm(condition_alarm, condition_reset, sig_file, msg):
 
 def get_stamina(grid_power, pv_power, battery_power, soc):
 #A calcualtion based on the sustainablility of power in current conditions.
-#1. Start with 100% stamina
-#2. if grid usage is more then 1kw, deduct 30 points
-#3. if pv input is more than 6kw, add 50 points
-#4. if soc is < 50% deduct 20 points
-#5. if battery_power > 0 deduct 30 points
+
     stamina = 100
     if grid_power >= 50:
         stamina = min(stamina,50)
     if (soc < 50) and (battery_power >= 0):
         stamina = min(stamina,soc)
+    if (battery_power >= 5000): 
+        stamina = min(stamina,9) #Very bad
 
     return stamina
 
