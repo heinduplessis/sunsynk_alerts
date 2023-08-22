@@ -92,7 +92,9 @@ def get_stamina(grid_power, pv_power, battery_power, soc):
     if (soc < 50) and (battery_power >= 0):
         stamina = min(stamina,soc)
     if (battery_power >= 5000): 
-        stamina = min(stamina,9) #Very bad
+        stamina = min(stamina,20) #Bad
+    if (battery_power >= 8000): 
+        stamina = min(stamina,5) #Bad
 
     return stamina
 
